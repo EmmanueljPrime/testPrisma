@@ -17,8 +17,13 @@ model User {
   created_at        DateTime      @default(now())
 
   // Relations
+  role              Role
   client            Client?
   seller            Seller?
+  // Contraintes relationnelles :
+  // - Si role = "CLIENT", client doit exister
+  // - Si role = "SELLER", seller doit exister
+
 }
 
 model Client{
@@ -34,4 +39,9 @@ model Seller {
   business_name     String
   userId            Int           @unique
   user              User          @relation(fields: [userId],references: [id])
+}
+
+enum Role {
+  CLIENT
+  SELLER
 }
