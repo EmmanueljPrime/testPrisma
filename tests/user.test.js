@@ -194,4 +194,5 @@ describe('Product Tests', () => {
             message: expect.stringMatching(/No 'Seller' record/), // Validez une partie du message d'erreur
         });
     });
+
 })
