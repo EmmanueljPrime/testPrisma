@@ -32,14 +32,20 @@ model Client{
   lastname          String
   userId            Int           @unique
   user              User          @relation(fields: [userId], references: [id])
+  projects          Project[]
+  orders            Order[]
 }
 
 model Seller {
   id                Int           @id @default(autoincrement())
   business_name     String
   products          Product[]
+  adverts           Advert[]
+  orders            Order[]
+  proposals         Proposal[]
   userId            Int           @unique
   user              User          @relation(fields: [userId],references: [id])
+  projects          Project[]     @relation("SellerProject") // Relation avec les projets acceptés
 }
 
 model Product {
@@ -49,11 +55,12 @@ model Product {
   price             Decimal       @db.Decimal(10,2)
   stock             Int
   created_at        DateTime      @default(now())
-  updated_at        DateTime      @default(now())
-  sellerId          Int
-  seller            Seller        @relation(fields: [sellerId], references: [id])
+  updated_at        DateTime      @updatedAt
   images            Image[]
   categories        Category[]
+  orders            Order[]
+  sellerId          Int
+  seller            Seller        @relation(fields: [sellerId], references: [id])
 }
 
 model Image {
@@ -68,6 +75,73 @@ model Category {
   name              String
   products          Product[]
 }
+
+model Project {
+  id                Int           @id @default(autoincrement())
+  title             String
+  description       String        @db.Text
+  deadline          DateTime
+  status            String        @default("pending")//Status: pending, accepted, in_progress, completed
+  created_at        DateTime      @default(now())
+  proposals         Proposal[]
+  orderId           Int
+  order             Order?         @relation("ProjectOrder")
+  clientId          Int
+  client            Client        @relation(fields: [clientId],references: [id])
+  sellerId          Int?
+  seller            Seller?       @relation("SellerProject",fields: [sellerId],references: [id])
+  advert            Advert?       @relation("ProjectAdvert")
+
+}
+
+model Proposal {
+  id                Int           @id @default(autoincrement())
+  price             Decimal       @db.Decimal(10,2)
+  message           String
+  status            String        @default("pending")//Status : pending, accepted, rejected
+  created_at        DateTime      @default(now())
+  updated_at        DateTime?     @updatedAt
+  projectId         Int
+  project           Project       @relation(fields: [projectId],references: [id])
+  sellerId          Int
+  seller            Seller        @relation(fields: [sellerId],references: [id])
+  advertId          Int
+  advert            Advert        @relation(fields: [advertId],references: [id])
+}
+
+model Advert {
+  id                Int           @id @default(autoincrement())
+  price             Decimal       @db.Decimal(10,2)
+  title             String
+  description       String
+  status            String        @default("active") // Status : active, closed
+  created_at        DateTime      @default(now())
+  proposals         Proposal[]
+  sellerId          Int
+  seller            Seller        @relation(fields: [sellerId],references: [id])
+  projectId         Int?          @unique
+  project           Project?      @relation("ProjectAdvert",fields: [projectId],references: [id])
+}
+
+model Order {
+  id                Int           @id @default(autoincrement())
+  quantity          Int
+  totalPrice        Decimal       @db.Decimal(10,2)
+  status            String        @default("pending") // Status : pending, shipped, delivered, cancelled
+  paymentStatus     String        @default("unpaid")  // Payment status : unpaid, paid, refunded
+  created_at        DateTime      @default(now())
+  updated_at        DateTime      @updatedAt
+  productId         Int
+  product           Product       @relation(fields: [productId],references: [id])
+  projectId         Int?          @unique
+  project           Project?       @relation("ProjectOrder",fields: [projectId],references: [id])
+  sellerId          Int
+  seller            Seller        @relation(fields: [sellerId],references: [id])
+  clientId          Int
+  client            Client        @relation(fields: [clientId],references: [id])
+}
+
+
 
 enum Role {
   CLIENT
