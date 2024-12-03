@@ -452,3 +452,161 @@ describe('Update User Tests', () => {
     });
 
 })
+
+describe('Delete User Tests', () => {
+
+    it('Should delete a user by ID', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'deleteuser@example.com',
+                username: 'deleteuser',
+                password: 'securepassword',
+                role: 'CLIENT',
+                client: {
+                    create: {
+                        firstname: 'John',
+                        lastname: 'Doe',
+                    },
+                },
+            },
+        });
+
+        // Supprimer l'utilisateur
+        await prisma.user.delete({
+            where: { id: user.id },
+        });
+
+        // Vérification
+        const deletedUser = await prisma.user.findUnique({
+            where: { id: user.id },
+        });
+        expect(deletedUser).toBeNull();
+    });
+
+    it('Should delete the associated client profile when the user is deleted', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'clientdelete@example.com',
+                username: 'clientdelete',
+                password: 'securepassword',
+                role: 'CLIENT',
+                client: {
+                    create: {
+                        firstname: 'John',
+                        lastname: 'Doe',
+                    },
+                },
+            },
+            include: { client: true },
+        });
+
+        // Supprimer l'utilisateur
+        await prisma.user.delete({
+            where: { id: user.id },
+        });
+
+        // Vérification
+        const deletedClient = await prisma.client.findUnique({
+            where: { id: user.client.id },
+        });
+        expect(deletedClient).toBeNull();
+    });
+
+    it('Should delete the associated seller profile when the user is deleted', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'sellerdelete@example.com',
+                username: 'sellerdelete',
+                password: 'securepassword',
+                role: 'SELLER',
+                seller: {
+                    create: {
+                        business_name: 'My Business',
+                    },
+                },
+            },
+            include: { seller: true },
+        });
+
+        // Supprimer l'utilisateur
+        await prisma.user.delete({
+            where: { id: user.id },
+        });
+
+        // Vérification
+        const deletedSeller = await prisma.seller.findUnique({
+            where: { id: user.seller.id },
+        });
+        expect(deletedSeller).toBeNull();
+    });
+
+    it('Should delete all messages associated with the user when the user is deleted', async () => {
+        const sender = await prisma.user.create({
+            data: {
+                email: 'sender@example.com',
+                username: 'sender',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        const recipient = await prisma.user.create({
+            data: {
+                email: 'recipient@example.com',
+                username: 'recipient',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        // Créer un message
+        const message = await prisma.message.create({
+            data: {
+                content: 'Hello!',
+                senderId: sender.id,
+                recipientId: recipient.id,
+            },
+        });
+
+        // Supprimer l'utilisateur (sender)
+        await prisma.user.delete({
+            where: { id: sender.id },
+        });
+
+        // Vérification
+        const deletedMessage = await prisma.message.findUnique({
+            where: { id: message.id },
+        });
+        expect(deletedMessage).toBeNull();
+    });
+
+    it('Should delete all notifications associated with the user when the user is deleted', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'notifuser@example.com',
+                username: 'notifuser',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        // Créer une notification
+        const notification = await prisma.notification.create({
+            data: {
+                content: 'You have a new message!',
+                userId: user.id,
+            },
+        });
+
+        // Supprimer l'utilisateur
+        await prisma.user.delete({
+            where: { id: user.id },
+        });
+
+        // Vérification
+        const deletedNotification = await prisma.notification.findUnique({
+            where: { id: notification.id },
+        });
+        expect(deletedNotification).toBeNull();
+    });
+})

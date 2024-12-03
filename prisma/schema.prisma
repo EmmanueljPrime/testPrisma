@@ -36,7 +36,7 @@ model Client{
 
   //Relations
   userId            Int           @unique
-  user              User          @relation(fields: [userId], references: [id])
+  user              User          @relation(fields: [userId], references: [id],onDelete: Cascade)
   projects          Project[]
   orders            Order[]
 }
@@ -51,7 +51,7 @@ model Seller {
   orders            Order[]
   proposals         Proposal[]
   userId            Int           @unique
-  user              User          @relation(fields: [userId],references: [id])
+  user              User          @relation(fields: [userId],references: [id],onDelete: Cascade)
   projects          Project[]     @relation("SellerProject") // Relation avec les projets acceptés
 }
 
@@ -170,9 +170,9 @@ model Message {
 
   // Relations
   senderId          Int
-  sender            User          @relation("SenderMessages", fields: [senderId], references: [id])
+  sender            User          @relation("SenderMessages", fields: [senderId], references: [id],onDelete: Cascade)
   recipientId       Int
-  recipient         User          @relation("RecipientMessages", fields: [recipientId], references: [id])
+  recipient         User          @relation("RecipientMessages", fields: [recipientId], references: [id],onDelete: Cascade)
 }
 
 model Notification {
@@ -183,7 +183,7 @@ model Notification {
 
   // Relations
   userId            Int
-  user              User          @relation(fields: [userId], references: [id])
+  user              User          @relation(fields: [userId], references: [id],onDelete: Cascade)
 }
 
 enum Role {
