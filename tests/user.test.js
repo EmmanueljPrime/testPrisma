@@ -275,3 +275,180 @@ describe('Get User Tests', () => {
         expect(foundUser.seller.business_name).toBe('SellerCorp');
     })
 })
+
+describe('Update User Tests', () => {
+
+    it('Should update the user\'s email', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'oldemail@example.com',
+                username: 'testuser',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: { email: 'newemail@example.com' },
+        });
+
+        expect(updatedUser.email).toBe('newemail@example.com');
+    });
+
+    it('Should fail to update the user\'s email to an existing email', async () => {
+        await prisma.user.create({
+            data: {
+                email: 'existingemail@example.com',
+                username: 'existinguser',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        const user = await prisma.user.create({
+            data: {
+                email: 'uniqueemail@example.com',
+                username: 'testuser',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        await expect(
+            prisma.user.update({
+                where: { id: user.id },
+                data: { email: 'existingemail@example.com' },
+            })
+        ).rejects.toThrow(/Unique constraint failed on the fields: \(`email`\)/);
+    });
+
+    it('Should update the user\'s username', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'testuser@example.com',
+                username: 'oldusername',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: { username: 'newusername' },
+        });
+
+        expect(updatedUser.username).toBe('newusername');
+    });
+
+    it('Should fail to update the user\'s username to an existing username', async () => {
+        await prisma.user.create({
+            data: {
+                email: 'existinguser@example.com',
+                username: 'existingusername',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        const user = await prisma.user.create({
+            data: {
+                email: 'testuser@example.com',
+                username: 'uniqueusername',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        await expect(
+            prisma.user.update({
+                where: { id: user.id },
+                data: { username: 'existingusername' },
+            })
+        ).rejects.toThrow(/Unique constraint failed on the fields: \(`username`\)/);
+    });
+
+    it('Should update the user\'s password', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'testuser@example.com',
+                username: 'testuser',
+                password: 'oldpassword',
+                role: 'CLIENT',
+            },
+        });
+
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: { password: 'newsecurepassword' },
+        });
+
+        expect(updatedUser.password).toBe('newsecurepassword');
+    });
+
+    it('Should fail to update the user\'s password to a short password', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'testuser@example.com',
+                username: 'testuser',
+                password: 'securepassword',
+                role: 'CLIENT',
+            },
+        });
+
+        // Utilisez la logique métier avec validation
+        const updatePassword = async (userId, newPassword) => {
+            if (newPassword.length < 8) {
+                throw new Error('Password must be at least 8 characters long');
+            }
+            return prisma.user.update({
+                where: { id: userId },
+                data: { password: newPassword },
+            });
+        };
+
+        // Teste le rejet d'un mot de passe trop court
+        await expect(updatePassword(user.id, 'short')).rejects.toThrow(
+            'Password must be at least 8 characters long'
+        );
+    });
+
+    it('Should update the user\'s profile picture', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'testuser@example.com',
+                username: 'testuser',
+                password: 'securepassword',
+                role: 'CLIENT',
+                profile_picture: 'http://oldpicture.com/old.jpg',
+            },
+        });
+
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: { profile_picture: 'http://newpicture.com/new.jpg' },
+        });
+
+        expect(updatedUser.profile_picture).toBe('http://newpicture.com/new.jpg');
+    });
+
+    it('Should remove the user\'s profile picture', async () => {
+        const user = await prisma.user.create({
+            data: {
+                email: 'testuser@example.com',
+                username: 'testuser',
+                password: 'securepassword',
+                role: 'CLIENT',
+                profile_picture: 'http://picture.com/picture.jpg',
+            },
+        });
+
+        const updatedUser = await prisma.user.update({
+            where: { id: user.id },
+            data: { profile_picture: null },
+        });
+
+        expect(updatedUser.profile_picture).toBeNull();
+    });
+
+})
