@@ -163,9 +163,10 @@ describe('Create User Tests', () => {
             })
         ).rejects.toThrow(); // Doit lever une erreur car le rôle est invalide
     });
+
 });
 
-describe('Get User Tests', () => {
+describe('Read User Tests', () => {
     it('Should return a list of users', async () => {
 
         await prisma.user.createMany({
@@ -610,3 +611,5 @@ describe('Delete User Tests', () => {
         expect(deletedNotification).toBeNull();
     });
 })
+
+
