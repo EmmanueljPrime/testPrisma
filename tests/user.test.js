@@ -8,11 +8,17 @@ beforeAll(async () => {
     await prisma.user.deleteMany();
 });
 
+beforeEach(async () => {
+    await prisma.client.deleteMany();
+    await prisma.seller.deleteMany();
+    await prisma.user.deleteMany();
+});
+
 afterAll(async () => {
     await prisma.$disconnect();
 });
 
-describe('User Tests', () => {
+describe('Create User Tests', () => {
     it('Should create a user as a client', async () => {
         const user = await prisma.user.create({
             data: {
@@ -60,6 +66,79 @@ describe('User Tests', () => {
         expect(user.client).toBeUndefined(); // Relation client doit être absente
     });
 
+    it('Should fail to create a user with an existing email', async () => {
+        const user1 = await prisma.user.create({
+            data: {
+                email: 'client@example.com',
+                username: 'clientuser1',
+                password: 'securepassword',
+                role: 'CLIENT',
+                client: {
+                    create: {
+                        firstname: 'John',
+                        lastname: 'Doe',
+                    },
+                },
+            },
+            include: { client: true },
+        });
+
+        await expect(
+            prisma.user.create({
+                data: {
+                    email: 'client@example.com',
+                    username: 'clientuser2',
+                    password: 'securepassword',
+                    role: 'CLIENT',
+                    client: {
+                        create: {
+                            firstname: 'Johnny',
+                            lastname: 'Dowee',
+                        },
+                    },
+                },
+            include: { client: true },
+            })
+        ).rejects.toThrow(/Unique constraint failed on the fields: \(`email`\)/);
+
+    })
+
+    it('Should fail to create a user with an existing username', async () => {
+        const user1 = await prisma.user.create({
+            data: {
+                email: 'client1@example.com',
+                username: 'clientuser',
+                password: 'securepassword',
+                role: 'CLIENT',
+                client: {
+                    create: {
+                        firstname: 'John',
+                        lastname: 'Doe',
+                    },
+                },
+            },
+            include: { client: true },
+        });
+
+        await expect(
+            prisma.user.create({
+                data: {
+                    email: 'client2@example.com',
+                    username: 'clientuser',
+                    password: 'securepassword',
+                    role: 'CLIENT',
+                    client: {
+                        create: {
+                            firstname: 'Johnny',
+                            lastname: 'Dowee',
+                        },
+                    },
+                },
+                include: { client: true },
+            })
+        ).rejects.toThrow(/Unique constraint failed on the fields: \(`username`\)/);
+    })
+
     it('Should fail to create a user without a role', async () => {
         await expect(
             prisma.user.create({
@@ -86,33 +165,66 @@ describe('User Tests', () => {
     });
 });
 
-describe('Product Tests', () => {
-    let sellerUser, clientUser;
+describe('Get User Tests', () => {
+    it('Should return a list of users', async () => {
 
-    beforeAll(async () => {
+        await prisma.user.createMany({
+            data: [
+                { email: 'user1@example.com', username: 'user1', password: 'securepassword', role: 'CLIENT' },
+                { email: 'user2@example.com', username: 'user2', password: 'securepassword', role: 'SELLER' },
+            ],
+        });
 
-        await prisma.image.deleteMany();
-        await prisma.product.deleteMany();
-        await prisma.seller.deleteMany();
-        await prisma.client.deleteMany();
-        await prisma.user.deleteMany();
+        const users = await prisma.user.findMany();
 
-        sellerUser = await prisma.user.create({
-            data: {
-                email: 'seller@example.com',
-                username: 'selleruser',
-                password: 'securepassword',
-                role: 'SELLER',
-                seller: {
-                    create: {
-                        business_name: 'My Business',
-                    },
-                },
-            },
-            include: { seller: true },
-        })
+        expect(users).not.toBeNull();
+        expect(users.length).toBeGreaterThanOrEqual(2);
+        expect(users[0]).toHaveProperty('email');
+        expect(users[1]).toHaveProperty('username');
+    })
+    it('Should return a user by is id', async () => {
 
-        clientUser = await prisma.user.create({
+        const user = await prisma.user.create({
+            data: { email: 'user3@example.com', username: 'user3', password: 'securepassword', role: 'CLIENT' },
+        });
+
+        const foundUser = await prisma.user.findUnique({
+            where: { id: user.id },
+        });
+
+        expect(foundUser).not.toBeNull();
+        expect(foundUser.email).toBe('user3@example.com');
+        expect(foundUser.username).toBe('user3');
+    })
+    it('Should return a user by is email', async () => {
+
+        const user = await prisma.user.create({
+            data: { email: 'user4@example.com', username: 'user4', password: 'securepassword', role: 'SELLER' },
+        });
+
+        const foundUser = await prisma.user.findUnique({
+            where: { email: 'user4@example.com' },
+        });
+
+        expect(foundUser).not.toBeNull();
+        expect(foundUser.username).toBe('user4');
+    })
+    it('Should return a user by is username', async () => {
+
+        const user = await prisma.user.create({
+            data: { email: 'user5@example.com', username: 'user5', password: 'securepassword', role: 'CLIENT' },
+        });
+
+        const foundUser = await prisma.user.findUnique({
+            where: { username: 'user5' },
+        });
+
+        expect(foundUser).not.toBeNull();
+        expect(foundUser.email).toBe('user5@example.com');
+    })
+    it('Should retrieve the client profile associated with th user', async () => {
+
+        const user = await prisma.user.create({
             data: {
                 email: 'client@example.com',
                 username: 'clientuser',
@@ -126,73 +238,40 @@ describe('Product Tests', () => {
                 },
             },
             include: { client: true },
-        })
-    })
+        });
 
-    afterAll(async () => {
-        await prisma.image.deleteMany();
-        await prisma.product.deleteMany();
-        await prisma.seller.deleteMany();
-        await prisma.client.deleteMany();
-        await prisma.user.deleteMany();
-        await prisma.$disconnect();
-    })
+        const foundUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            include: { client: true },
+        });
 
-    it('Should Seller create a product', async () => {
-        //console.log(sellerUser)
-        if (!sellerUser) {
-            throw new Error("Seller does not exist");
-        }
-        const product = await prisma.product.create({
+        expect(foundUser.client).not.toBeNull();
+        expect(foundUser.client.firstname).toBe('John');
+        expect(foundUser.client.lastname).toBe('Doe');
+    })
+    it('Should retrieve the seller profile associated with th user', async () => {
+
+        const user = await prisma.user.create({
             data: {
-                name: 'Sample Product',
-                description: 'Sample description',
-                price: 99.99,
-                stock: 10,
-                seller: {connect: { id:sellerUser.seller.id } },
+                email: 'seller@example.com',
+                username: 'selleruser',
+                password: 'securepassword',
+                role: 'SELLER',
+                seller: {
+                    create: {
+                        business_name: 'SellerCorp',
+                    },
+                },
             },
             include: { seller: true },
         });
-        //console.log('Create product with data:', product);
-        expect(product).toBeDefined();
-        expect(product.name).toBe('Sample Product');
-        expect(Number(product.price)).toBe(99.99);
-        expect(product.stock).toBe(10);
-        expect(product.seller.id).toBe(sellerUser.seller.id);
-    })
-    it('Should fail to create a product', async () => {
-        await expect(
-            prisma.product.create({
-                data: {
-                    name: 'Invalid Product',
-                    description: 'This should fail',
-                    price: 50.00,
-                    stock: 5,
-                    // Absence de seller: { connect: { id: ... } }, devrait provoquer une erreur
-                },
-            })
-        ).rejects.toThrow();
-    })
 
-    it('Should Client fail to create a product', async () => {
-        await expect(
-            prisma.product.create({
-                data: {
-                    name: 'Client Product',
-                    description: 'A client should not be able to create this',
-                    price: 50.00,
-                    stock: 10,
-                    seller: {
-                        connect: {
-                            userId: clientUser.id, // Tentative de connecter un client comme vendeur
-                        },
-                    },
-                },
-            })
-        ).rejects.toMatchObject({
-            code: 'P2025', // Code d'erreur attendu de Prisma
-            message: expect.stringMatching(/No 'Seller' record/), // Validez une partie du message d'erreur
+        const foundUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            include: { seller: true },
         });
-    });
 
+        expect(foundUser.seller).not.toBeNull();
+        expect(foundUser.seller.business_name).toBe('SellerCorp');
+    })
 })
